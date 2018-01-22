@@ -11,7 +11,9 @@ from rasa_nlu.model import Metadata, Interpreter
 
 
 class Command(BaseCommand):
-    help = 'Starts the bot for the first'
+
+    def __init__(self):
+        self.auto_detection_enabled = True
 
     def analyse_message(self, message):
         model_directory = settings.TRAINING_MODEL_QUESTION_ORIENTED
@@ -29,6 +31,24 @@ class Command(BaseCommand):
         message = parse.sub("", message)
         return message
 
+    def is_programming_question(self, event):
+        if ('type' in event
+        and event['type'] == 'message'
+        and event['user'] != settings.BOT_UID):
+            message_info = self.analyse_message(event['text'])
+            print("answer " + str(message_info))
+            return ("programming" in message_info['intent']['name'] and float(message_info['intent']['confidence']) > 0.90)
+        return False
+
+    def is_direct_message(self, event):
+        return ('type' in event
+        and event['type'] == 'message'
+        and event['user'] != settings.BOT_UID
+        and ("<@" + settings.BOT_UID + ">") in event['text'])
+
+    def toggle_detection_check(self, event):
+        return (self.is_direct_message(event) and ("<@" + settings.BOT_UID + "> toggle" == event['text']))
+
 
     def handle(self, *args, **options):
         print(Team.objects)
@@ -39,17 +59,13 @@ class Command(BaseCommand):
                 events = client.rtm_read()
                 print("%s----%s" % (team, events))
                 for event in events:
-                    if 'type' in event and event['type'] == 'message' and event['user'] != 'U8CLSEWAC':
-                        '''url = 'http://localhost:8001/answer/'
-                        params =  {
-                            'question': event['text']
-                        }
-
-                        response = requests.get(url, params)
-                        answer = self.parse_for_slack(response.text)
-                        '''
-                        answer = self.analyse_message(event["text"])
-                        print("answer " + str(answer))
-                        if "programming" in answer["intent"]["name"] and float(answer["intent"]["confidence"]) > 0.90:
-                            client.rtm_send_message(event['channel'], "opi")
+                    if self.toggle_detection_check(event):
+                        self.auto_detection_enabled = not self.auto_detection_enabled
+                        client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
+                    elif self.is_direct_message(event):
+                        client.rtm_send_message(event['channel'], "immediately")
+                    elif self.auto_detection_enabled and self.is_programming_question(event):
+                        client.rtm_send_message(event['channel'], "opi")
+                        #response = requests.get(settings, message_info)
+                        #answer = self.parse_for_slack(response.text)
                 time.sleep(0.1)
