@@ -4,6 +4,7 @@ from slackclient import SlackClient
 import time
 import requests
 import re
+import json
 from django.conf import settings
 from rasa_nlu.config import RasaNLUConfig
 from rasa_nlu.components import ComponentBuilder
@@ -14,13 +15,13 @@ class Command(BaseCommand):
 
     def __init__(self):
         self.auto_detection_enabled = True
+        self.messages_info = []
 
     def analyse_message(self, message):
         model_directory = settings.TRAINING_MODEL_QUESTION_ORIENTED
         interpreter = Interpreter.load(model_directory, RasaNLUConfig(settings.TRAINING_CONFIGURATION_FILE))
         interpreted_message = interpreter.parse(message)
         return interpreted_message
-
 
     def parse_for_slack(self, message):
         block = re.compile('(<pre><code>|</code></pre>)')
@@ -36,8 +37,9 @@ class Command(BaseCommand):
         and event['type'] == 'message'
         and event['user'] != settings.BOT_UID):
             message_info = self.analyse_message(event['text'])
-            print("answer " + str(message_info))
-            return ("programming" in message_info['intent']['name'] and float(message_info['intent']['confidence']) > 0.90)
+            if ("programming" in message_info['intent']['name'] and float(message_info['intent']['confidence']) > 0.90):
+                self.messages_info.append(message_info)
+                return True
         return False
 
     def is_direct_message(self, event):
@@ -49,6 +51,16 @@ class Command(BaseCommand):
     def toggle_detection_check(self, event):
         return (self.is_direct_message(event) and ("<@" + settings.BOT_UID + "> toggle" == event['text']))
 
+    def post_message_to_middleware(self, message):
+        message_json = {
+                            'question' : message['text'],
+                            'entities' : str([(e['value'], e['entity']) for e in message['entities']]),
+                            'intent'   : message['intent']['name'],
+                            'confidence' : message['intent']['confidence']
+                        }
+
+        response = requests.get(settings.MIDDLEWARE_URL, message_json)
+        return self.parse_for_slack(response.text)
 
     def handle(self, *args, **options):
         print(Team.objects)
@@ -63,9 +75,12 @@ class Command(BaseCommand):
                         self.auto_detection_enabled = not self.auto_detection_enabled
                         client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
                     elif self.is_direct_message(event):
-                        client.rtm_send_message(event['channel'], "immediately")
+                        message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
+                        message_info = self.analyse_message(message)
+                        answer = self.post_message_to_middleware(message_info)
+                        client.rtm_send_message(event['channel'], answer)
                     elif self.auto_detection_enabled and self.is_programming_question(event):
-                        client.rtm_send_message(event['channel'], "opi")
-                        #response = requests.get(settings, message_info)
-                        #answer = self.parse_for_slack(response.text)
+                        message_info =  self.messages_info.pop(0)
+                        answer = self.post_message_to_middleware(message_info)
+                        client.rtm_send_message(event['channel'], answer)
                 time.sleep(0.1)
