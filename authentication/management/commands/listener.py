@@ -37,6 +37,7 @@ class Command(BaseCommand):
         and event['type'] == 'message'
         and event['user'] != settings.BOT_UID):
             message_info = self.analyse_message(event['text'])
+            print(message_info)
             if ("programming" in message_info['intent']['name'] and float(message_info['intent']['confidence']) > 0.90):
                 self.messages_info.append(message_info)
                 return True
