@@ -128,4 +128,5 @@ TRAINING_CONFIGURATION_FILE = "/home/anton/py_workspace/restaurant_tutorial/conf
 TRAINING_MODEL_PROGRAMMING_GENERAL = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180120-042323"
 TRAINING_MODEL_QUESTION_ORIENTED = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180121-163528"
 MIDDLEWARE_URL = "http://localhost:8001/answer/"
+MINIMAL_NUMBER_OF_WORDS = 4
 BOT_UID = 'U8CLSEWAC'

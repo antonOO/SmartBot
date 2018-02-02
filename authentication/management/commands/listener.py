@@ -16,6 +16,7 @@ class Command(BaseCommand):
     def __init__(self):
         self.auto_detection_enabled = True
         self.messages_info = []
+        self.number_of_answers = 1
 
     def analyse_message(self, message):
         model_directory = settings.TRAINING_MODEL_QUESTION_ORIENTED
@@ -35,6 +36,7 @@ class Command(BaseCommand):
     def is_programming_question(self, event):
         if ('type' in event
         and event['type'] == 'message'
+        and len(event['text'].split()) >= settings.MINIMAL_NUMBER_OF_WORDS
         and event['user'] != settings.BOT_UID):
             message_info = self.analyse_message(event['text'])
             print(message_info)
@@ -52,12 +54,20 @@ class Command(BaseCommand):
     def toggle_detection_check(self, event):
         return (self.is_direct_message(event) and ("<@" + settings.BOT_UID + "> toggle" == event['text']))
 
+    def change_nasnwers_check(self, event):
+        return (self.is_direct_message(event)
+        and len(event['text'].split()) == 3
+        and "answers" == event['text'].split()[1]
+        and event['text'].split()[2].isdigit())
+
+
     def post_message_to_middleware(self, message):
         message_json = {
                             'question' : message['text'],
                             'entities' : str([(e['value'], e['entity']) for e in message['entities']]),
                             'intent'   : message['intent']['name'],
-                            'confidence' : message['intent']['confidence']
+                            'confidence' : message['intent']['confidence'],
+                            'num_answers' : self.number_of_answers
                         }
 
         response = requests.get(settings.MIDDLEWARE_URL, message_json)
@@ -75,6 +85,9 @@ class Command(BaseCommand):
                     if self.toggle_detection_check(event):
                         self.auto_detection_enabled = not self.auto_detection_enabled
                         client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
+                    elif self.change_nasnwers_check(event):
+                        self.number_of_answers = int(event['text'].split()[2])
+                        client.rtm_send_message(event['channel'], "Number of answers returned are %d" % self.number_of_answers)
                     elif self.is_direct_message(event):
                         message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
                         message_info = self.analyse_message(message)
