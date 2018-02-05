@@ -24,19 +24,24 @@ class Command(BaseCommand):
         interpreted_message = interpreter.parse(message)
         return interpreted_message
 
-    def parse_for_slack(self, message):
-        block = re.compile('(<pre><code>|</code></pre>)')
-        message = block.sub("```", message)
-        snip = re.compile('(<code>|</code>)')
-        message = snip.sub("`", message)
-        parse = re.compile('</*h[0-9]>|</*[a-z]*>')
-        message = parse.sub("", message)
+    def parse_for_slack(self, messages):
+        parsed_messages = []
+        for message in messages:
+            block = re.compile('(<pre><code>|</code></pre>)')
+            message = block.sub("```", message)
+            snip = re.compile('(<code>|</code>)')
+            message = snip.sub("`", message)
+            parse = re.compile('</*h[0-9]>|</*[a-z]*>')
+            message = parse.sub("", message)
+            parsed_messages.append(message)
+        message = "\n =============================================================================== \n".join(parsed_messages)
         return message
 
     def is_programming_question(self, event):
         if ('type' in event
         and event['type'] == 'message'
         and len(event['text'].split()) >= settings.MINIMAL_NUMBER_OF_WORDS
+        and 'user' in event
         and event['user'] != settings.BOT_UID):
             message_info = self.analyse_message(event['text'])
             print(message_info)
@@ -58,7 +63,8 @@ class Command(BaseCommand):
         return (self.is_direct_message(event)
         and len(event['text'].split()) == 3
         and "answers" == event['text'].split()[1]
-        and event['text'].split()[2].isdigit())
+        and event['text'].split()[2].isdigit()
+        and int(event['text'].split()[2]) > 0)
 
 
     def post_message_to_middleware(self, message):
@@ -71,7 +77,9 @@ class Command(BaseCommand):
                         }
 
         response = requests.get(settings.MIDDLEWARE_URL, message_json)
-        return self.parse_for_slack(response.text)
+        print(response.text)
+        array_of_answers = eval(response.text)
+        return self.parse_for_slack(array_of_answers)
 
     def handle(self, *args, **options):
         print(Team.objects)
