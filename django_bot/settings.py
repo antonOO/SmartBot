@@ -127,6 +127,10 @@ SLACK_CLIENT_SECRET = "fd14a5c68c9cc3209434042e9b805fd8"
 TRAINING_CONFIGURATION_FILE = "/home/anton/py_workspace/restaurant_tutorial/config_spacy.json"
 TRAINING_MODEL_PROGRAMMING_GENERAL = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180120-042323"
 TRAINING_MODEL_QUESTION_ORIENTED = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180121-163528"
-MIDDLEWARE_URL = "http://localhost:8001/answer/"
+
+MIDDLEWARE_URL_ANSWER= "http://localhost:8001/answer/"
+MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE = "http://localhost:8001/update_training_data_positive/?"
+MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE = "http://localhost:8001/update_training_data_negative/?"
+
 MINIMAL_NUMBER_OF_WORDS = 4
 BOT_UID = 'U8CLSEWAC'

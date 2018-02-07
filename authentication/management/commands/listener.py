@@ -5,6 +5,7 @@ import time
 import requests
 import re
 import json
+import urllib
 from django.conf import settings
 from rasa_nlu.config import RasaNLUConfig
 from rasa_nlu.components import ComponentBuilder
@@ -24,8 +25,8 @@ class Command(BaseCommand):
         interpreted_message = interpreter.parse(message)
         return interpreted_message
 
-    def parse_for_slack(self, messages):
-        parsed_messages = []
+    def parse_for_slack(self, messages, query):
+        parsed_output = []
         for message in messages:
             block = re.compile('(<pre><code>|</code></pre>)')
             message = block.sub("```", message)
@@ -33,9 +34,32 @@ class Command(BaseCommand):
             message = snip.sub("`", message)
             parse = re.compile('</*h[0-9]>|</*[a-z]*>')
             message = parse.sub("", message)
-            parsed_messages.append(message)
-        message = "\n =============================================================================== \n".join(parsed_messages)
-        return message
+
+            params = {'answer' : message, 'query' : query}
+            url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
+            url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
+            review_attachment = json.dumps([{
+                  "fallback": "Make Sobot better!",
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "I like the answer!",
+                      "url": url_update_positive,
+                      "style": "primary"
+                    },
+                    {
+                      "type": "button",
+                      "text": "Sobot this is garbage!",
+                      "url": url_update_negative,
+                      "style": "danger"
+                    }
+                  ]
+                }
+              ])
+
+
+            parsed_output.append((message,review_attachment))
+        return  parsed_output
 
     def is_programming_question(self, event):
         if ('type' in event
@@ -53,6 +77,7 @@ class Command(BaseCommand):
     def is_direct_message(self, event):
         return ('type' in event
         and event['type'] == 'message'
+        and 'user' in event
         and event['user'] != settings.BOT_UID
         and ("<@" + settings.BOT_UID + ">") in event['text'])
 
@@ -76,10 +101,12 @@ class Command(BaseCommand):
                             'num_answers' : self.number_of_answers
                         }
 
-        response = requests.get(settings.MIDDLEWARE_URL, message_json)
-        print(response.text)
-        array_of_answers = eval(response.text)
-        return self.parse_for_slack(array_of_answers)
+        response = requests.get(settings.MIDDLEWARE_URL_ANSWER, message_json)
+        json_answer_info = json.loads(response.text)
+
+        query_string = json_answer_info['query']
+        array_of_answers = eval(json_answer_info['passages'])
+        return self.parse_for_slack(array_of_answers, query_string)
 
     def handle(self, *args, **options):
         print(Team.objects)
@@ -99,10 +126,13 @@ class Command(BaseCommand):
                     elif self.is_direct_message(event):
                         message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
                         message_info = self.analyse_message(message)
-                        answer = self.post_message_to_middleware(message_info)
-                        client.rtm_send_message(event['channel'], answer)
+                        parsed_output = self.post_message_to_middleware(message_info)
+                        for (answer, review) in parsed_output:
+                            client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
                     elif self.auto_detection_enabled and self.is_programming_question(event):
                         message_info =  self.messages_info.pop(0)
-                        answer = self.post_message_to_middleware(message_info)
-                        client.rtm_send_message(event['channel'], answer)
+                        parsed_output = self.post_message_to_middleware(message_info)
+                        for (answer, review) in parsed_output:
+                            client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
+
                 time.sleep(0.1)
