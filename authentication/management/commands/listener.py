@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
     def parse_for_slack(self, messages, query):
         parsed_output = []
-        for message in messages:
+        for message, link in messages:
             block = re.compile('(<pre><code>|</code></pre>)')
             message = block.sub("```", message)
             snip = re.compile('(<code>|</code>)')
@@ -52,6 +52,11 @@ class Command(BaseCommand):
                       "text": "Sobot this is garbage!",
                       "url": url_update_negative,
                       "style": "danger"
+                    },
+                    {
+                      "type": "button",
+                      "text": "Show me more.",
+                      "url": link
                     }
                   ]
                 }
