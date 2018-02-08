@@ -64,6 +64,7 @@ class Command(BaseCommand):
     def is_programming_question(self, event):
         if ('type' in event
         and event['type'] == 'message'
+        and 'text' in event
         and len(event['text'].split()) >= settings.MINIMAL_NUMBER_OF_WORDS
         and 'user' in event
         and event['user'] != settings.BOT_UID):
@@ -86,6 +87,7 @@ class Command(BaseCommand):
 
     def change_nasnwers_check(self, event):
         return (self.is_direct_message(event)
+        and 'text' in event
         and len(event['text'].split()) == 3
         and "answers" == event['text'].split()[1]
         and event['text'].split()[2].isdigit()
