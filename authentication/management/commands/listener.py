@@ -16,6 +16,7 @@ class Command(BaseCommand):
 
     def __init__(self):
         self.auto_detection_enabled = True
+        self.divergent_flag = False
         self.messages_info = []
         self.number_of_answers = 1
 
@@ -98,6 +99,11 @@ class Command(BaseCommand):
         and event['text'].split()[2].isdigit()
         and int(event['text'].split()[2]) > 0)
 
+    def change_divergency_check(self, event):
+        return (self.is_direct_message(event)
+        and 'text' in event
+        and len(event['text'].split()) == 2
+        and "divergency" == event['text'].split()[1])
 
     def post_message_to_middleware(self, message):
         message_json = {
@@ -105,7 +111,8 @@ class Command(BaseCommand):
                             'entities' : str([(e['value'], e['entity']) for e in message['entities']]),
                             'intent'   : message['intent']['name'],
                             'confidence' : message['intent']['confidence'],
-                            'num_answers' : self.number_of_answers
+                            'num_answers' : self.number_of_answers,
+                            'divergent_flag' : self.divergent_flag
                         }
 
         response = requests.get(settings.MIDDLEWARE_URL_ANSWER, message_json)
@@ -130,6 +137,9 @@ class Command(BaseCommand):
                     elif self.change_nasnwers_check(event):
                         self.number_of_answers = int(event['text'].split()[2])
                         client.rtm_send_message(event['channel'], "Number of answers returned are %d" % self.number_of_answers)
+                    elif self.change_divergency_check(event):
+                        self.divergent_flag = not self.divergent_flag
+                        client.rtm_send_message(event['channel'], ("Divergent answers: %s" % str(self.divergent_flag)))
                     elif self.is_direct_message(event):
                         message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
                         message_info = self.analyse_message(message)
