@@ -132,5 +132,17 @@ MIDDLEWARE_URL_ANSWER= "http://localhost:8001/answer/"
 MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE = "http://localhost:8001/update_training_data_positive/?"
 MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE = "http://localhost:8001/update_training_data_negative/?"
 
+INFORMATIVE_MESSAGE = """
+                         SOBOT is a helper programming bot, which detects programming questions
+                         and tries to find answers on StackOverflow.
+                         SOBOT takes a number of commands:
+
+                         @Sobot answers <int>      <--- the answers command takes an integer indicating the number of answers to be output
+                         @Sobot toggle             <--- toggles(sets and disables) the autodetection of programming questions
+                         @Sobot divergency         <--- toggles(sets and disables) the divergent answer retrieval flag
+                                                        (used to return answers from different questions, rather than all the answers
+                                                        from the most relevat question)
+                         @Sobot <string>           <--- takes a string which is a question to be forwarded to SO
+                         """
 MINIMAL_NUMBER_OF_WORDS = 4
 BOT_UID = 'U8CLSEWAC'

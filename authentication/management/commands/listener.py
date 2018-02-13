@@ -28,7 +28,12 @@ class Command(BaseCommand):
 
     def parse_for_slack(self, messages, query):
         parsed_output = []
+        print(messages)
         for message, link in messages:
+
+            if message == "Cannot find an answer":
+                return [("Cannot find an answer", "")]
+
             block = re.compile('(<pre><code>|</code></pre>)')
             message = block.sub("```", message)
             snip = re.compile('(<code>|</code>)')
@@ -86,7 +91,7 @@ class Command(BaseCommand):
         and event['type'] == 'message'
         and 'user' in event
         and event['user'] != settings.BOT_UID
-        and ("<@" + settings.BOT_UID + ">") in event['text'])
+        and ("<@" + settings.BOT_UID + ">") == event['text'].split()[0])
 
     def toggle_detection_check(self, event):
         return (self.is_direct_message(event) and ("<@" + settings.BOT_UID + "> toggle" == event['text']))
@@ -104,6 +109,12 @@ class Command(BaseCommand):
         and 'text' in event
         and len(event['text'].split()) == 2
         and "divergency" == event['text'].split()[1])
+
+    def help_check(self, event):
+        return (self.is_direct_message(event)
+        and 'text' in event
+        and len(event['text'].split()) == 2
+        and "help" == event['text'].split()[1])
 
     def post_message_to_middleware(self, message):
         message_json = {
@@ -134,6 +145,8 @@ class Command(BaseCommand):
                     if self.toggle_detection_check(event):
                         self.auto_detection_enabled = not self.auto_detection_enabled
                         client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
+                    elif self.help_check(event):
+                        client.rtm_send_message(event['channel'], settings.INFORMATIVE_MESSAGE)
                     elif self.change_nasnwers_check(event):
                         self.number_of_answers = int(event['text'].split()[2])
                         client.rtm_send_message(event['channel'], "Number of answers returned are %d" % self.number_of_answers)
