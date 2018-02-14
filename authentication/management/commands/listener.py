@@ -10,7 +10,7 @@ from django.conf import settings
 from rasa_nlu.config import RasaNLUConfig
 from rasa_nlu.components import ComponentBuilder
 from rasa_nlu.model import Metadata, Interpreter
-
+from nltk.corpus import stopwords
 
 class Command(BaseCommand):
 
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         interpreted_message = interpreter.parse(message)
         return interpreted_message
 
-    def parse_for_slack(self, messages, query):
+    def parse_for_slack(self, messages, query, intent):
         parsed_output = []
         print(messages)
         for message, link in messages:
@@ -41,7 +41,7 @@ class Command(BaseCommand):
             parse = re.compile('</*h[0-9]>|</*[a-z]*>')
             message = parse.sub("", message)
 
-            params = {'answer' : message, 'query' : query}
+            params = {'answer' : message, 'query' : query, 'intent' : intent}
             url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
             url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
             review_attachment = json.dumps([{
@@ -117,8 +117,11 @@ class Command(BaseCommand):
         and "help" == event['text'].split()[1])
 
     def post_message_to_middleware(self, message):
+        cached_stop_words = stopwords.words("english")
+        stripped_question = " ".join(word for word in message["text"].split() if word not in cached_stop_words)
+
         message_json = {
-                            'question' : message['text'],
+                            'question' : stripped_question,
                             'entities' : str([(e['value'], e['entity']) for e in message['entities']]),
                             'intent'   : message['intent']['name'],
                             'confidence' : message['intent']['confidence'],
@@ -131,7 +134,9 @@ class Command(BaseCommand):
 
         query_string = json_answer_info['query']
         array_of_answers = eval(json_answer_info['passages'])
-        return self.parse_for_slack(array_of_answers, query_string)
+        intent = json_answer_info['intent']
+
+        return self.parse_for_slack(array_of_answers, query_string, intent)
 
     def handle(self, *args, **options):
         print(Team.objects)
