@@ -29,7 +29,7 @@ class Command(BaseCommand):
     def parse_for_slack(self, messages, query, intent):
         parsed_output = []
         print(messages)
-        for message, link in messages:
+        for message, link, bm25_score in messages:
 
             if message == "Cannot find an answer":
                 return [("Cannot find an answer", "")]
@@ -41,7 +41,7 @@ class Command(BaseCommand):
             parse = re.compile('</*h[0-9]>|</*[a-z]*>')
             message = parse.sub("", message)
 
-            params = {'answer' : message, 'query' : query, 'intent' : intent}
+            params = {'answer' : message, 'query' : query, 'intent' : intent, 'bm25_score' : bm25_score}
             url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
             url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
             review_attachment = json.dumps([{
