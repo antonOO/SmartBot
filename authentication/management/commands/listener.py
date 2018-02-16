@@ -20,6 +20,7 @@ class Command(BaseCommand):
         self.divergent_flag = False
         self.messages_info = []
         self.number_of_answers = 1
+        self.direct_search_flag = False
 
     def analyse_message(self, message):
         model_directory = settings.TRAINING_MODEL_QUESTION_ORIENTED
@@ -63,12 +64,13 @@ class Command(BaseCommand):
                       ]
                     }
                   ])
-
-
                 parsed_output.append((message,review_attachment))
             return parsed_output
         except:
-            return [("Could not find and answer!", "")]
+            parsed_output = []
+            for message in messages:
+                parsed_output.append((message, ""))
+            return parsed_output
 
 
 
@@ -93,7 +95,6 @@ class Command(BaseCommand):
         and event['user'] != settings.BOT_UID)
 
     def help_command(self, client, event):
-        print("OBEEEE")
         client.rtm_send_message(event['channel'], settings.INFORMATIVE_MESSAGE)
 
     def toggle_command(self, client, event):
@@ -112,6 +113,10 @@ class Command(BaseCommand):
             client.rtm_send_message(event['channel'], "Number of answers returned are %d" % self.number_of_answers)
         else:
             client.rtm_send_message(event['channel'], "Invalid use of answers command!")
+
+    def direct_search_command(self, client, event):
+        self.direct_search_flag = not self.direct_search_flag
+        client.rtm_send_message(event['channel'], ("Direct search: %s" % str(self.direct_search_flag)))
 
     def direct_message_command(self, client, event):
         message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
@@ -133,7 +138,8 @@ class Command(BaseCommand):
                                         "help" : self.help_command,
                                         "toggle" : self.toggle_command,
                                         "divergency" : self.divergency_command,
-                                        "answers" : self.num_answer_command
+                                        "answers" : self.num_answer_command,
+                                        "directsearch" : self.direct_search_command
                                      })
 
         command_dict = defaultdict(lambda : self.autodetection_triggered_command, {
@@ -147,18 +153,22 @@ class Command(BaseCommand):
             else:
                 command_dict = command_dict[word]
 
+    def remove_stopwords_non_direct(self, message):
+        if not self.direct_search_flag:
+            cached_stop_words = stopwords.words("english")
+            return " ".join(word for word in message["text"].split() if word not in cached_stop_words)
+        return message['text']
 
     def post_message_to_middleware(self, message):
-        cached_stop_words = stopwords.words("english")
-        stripped_question = " ".join(word for word in message["text"].split() if word not in cached_stop_words)
-
+        question = self.remove_stopwords_non_direct(message)
         message_json = {
-                            'question' : stripped_question,
+                            'question' : question,
                             'entities' : str([(e['value'], e['entity']) for e in message['entities']]),
                             'intent'   : message['intent']['name'],
                             'confidence' : message['intent']['confidence'],
                             'num_answers' : self.number_of_answers,
-                            'divergent_flag' : self.divergent_flag
+                            'divergent_flag' : self.divergent_flag,
+                            'direct_search_flag' : self.direct_search_flag
                         }
 
         response = requests.get(settings.MIDDLEWARE_URL_ANSWER, message_json)
