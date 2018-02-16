@@ -11,6 +11,7 @@ from rasa_nlu.config import RasaNLUConfig
 from rasa_nlu.components import ComponentBuilder
 from rasa_nlu.model import Metadata, Interpreter
 from nltk.corpus import stopwords
+from collections import defaultdict
 
 class Command(BaseCommand):
 
@@ -27,50 +28,49 @@ class Command(BaseCommand):
         return interpreted_message
 
     def parse_for_slack(self, messages, query, intent):
-        parsed_output = []
-        print(messages)
-        for message, link, bm25_score in messages:
-
-            if message == "Cannot find an answer":
-                return [("Cannot find an answer", "")]
-
-            block = re.compile('(<pre><code>|</code></pre>)')
-            message = block.sub("```", message)
-            snip = re.compile('(<code>|</code>)')
-            message = snip.sub("`", message)
-            parse = re.compile('</*h[0-9]>|</*[a-z]*>')
-            message = parse.sub("", message)
-
-            params = {'answer' : message, 'query' : query, 'intent' : intent, 'bm25_score' : bm25_score}
-            url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
-            url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
-            review_attachment = json.dumps([{
-                  "fallback": "Make Sobot better!",
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "I like the answer!",
-                      "url": url_update_positive,
-                      "style": "primary"
-                    },
-                    {
-                      "type": "button",
-                      "text": "Sobot this is garbage!",
-                      "url": url_update_negative,
-                      "style": "danger"
-                    },
-                    {
-                      "type": "button",
-                      "text": "Show me more.",
-                      "url": link
+        try:
+            parsed_output = []
+            for message, link, bm25_score in messages:
+                block = re.compile('(<pre><code>|</code></pre>)')
+                message = block.sub("```", message)
+                snip = re.compile('(<code>|</code>)')
+                message = snip.sub("`", message)
+                parse = re.compile('</*h[0-9]>|</*[a-z]*>')
+                message = parse.sub("", message)
+                params = {'answer' : message, 'query' : query, 'intent' : intent, 'bm25_score' : bm25_score}
+                url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
+                url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
+                review_attachment = json.dumps([{
+                      "fallback": "Make Sobot better!",
+                      "actions": [
+                        {
+                          "type": "button",
+                          "text": "I like the answer!",
+                          "url": url_update_positive,
+                          "style": "primary"
+                        },
+                        {
+                          "type": "button",
+                          "text": "Sobot this is garbage!",
+                          "url": url_update_negative,
+                          "style": "danger"
+                        },
+                        {
+                          "type": "button",
+                          "text": "Show me more.",
+                          "url": link
+                        }
+                      ]
                     }
-                  ]
-                }
-              ])
+                  ])
 
 
-            parsed_output.append((message,review_attachment))
-        return  parsed_output
+                parsed_output.append((message,review_attachment))
+            return parsed_output
+        except:
+            return [("Could not find and answer!", "")]
+
+
 
     def is_programming_question(self, event):
         if ('type' in event
@@ -86,35 +86,67 @@ class Command(BaseCommand):
                 return True
         return False
 
-    def is_direct_message(self, event):
+    def is_for_handling(self, event):
         return ('type' in event
         and event['type'] == 'message'
         and 'user' in event
-        and event['user'] != settings.BOT_UID
-        and ("<@" + settings.BOT_UID + ">") == event['text'].split()[0])
+        and event['user'] != settings.BOT_UID)
 
-    def toggle_detection_check(self, event):
-        return (self.is_direct_message(event) and ("<@" + settings.BOT_UID + "> toggle" == event['text']))
+    def help_command(self, client, event):
+        print("OBEEEE")
+        client.rtm_send_message(event['channel'], settings.INFORMATIVE_MESSAGE)
 
-    def change_nasnwers_check(self, event):
-        return (self.is_direct_message(event)
-        and 'text' in event
-        and len(event['text'].split()) == 3
-        and "answers" == event['text'].split()[1]
-        and event['text'].split()[2].isdigit()
-        and int(event['text'].split()[2]) > 0)
+    def toggle_command(self, client, event):
+        self.auto_detection_enabled = not self.auto_detection_enabled
+        client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
 
-    def change_divergency_check(self, event):
-        return (self.is_direct_message(event)
-        and 'text' in event
-        and len(event['text'].split()) == 2
-        and "divergency" == event['text'].split()[1])
+    def divergency_command(self, client, event):
+        self.divergent_flag = not self.divergent_flag
+        client.rtm_send_message(event['channel'], ("Divergent answers: %s" % str(self.divergent_flag)))
 
-    def help_check(self, event):
-        return (self.is_direct_message(event)
-        and 'text' in event
-        and len(event['text'].split()) == 2
-        and "help" == event['text'].split()[1])
+    def num_answer_command(self, client, event):
+        if (len(event['text'].split()) == 3
+         and event['text'].split()[2].isdigit()
+         and int(event['text'].split()[2]) > 0):
+            self.number_of_answers = int(event['text'].split()[2])
+            client.rtm_send_message(event['channel'], "Number of answers returned are %d" % self.number_of_answers)
+        else:
+            client.rtm_send_message(event['channel'], "Invalid use of answers command!")
+
+    def direct_message_command(self, client, event):
+        message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
+        message_info = self.analyse_message(message)
+        parsed_output = self.post_message_to_middleware(message_info)
+        for (answer, review) in parsed_output:
+            client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
+
+    def autodetection_triggered_command(self, client, event):
+        if self.auto_detection_enabled and self.is_programming_question(event):
+            message_info =  self.messages_info.pop(0)
+            parsed_output = self.post_message_to_middleware(message_info)
+            for (answer, review) in parsed_output:
+                client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
+
+    def handle_commands(self, client, event):
+        sobot_commands = defaultdict(lambda : self.direct_message_command,
+                                     {
+                                        "help" : self.help_command,
+                                        "toggle" : self.toggle_command,
+                                        "divergency" : self.divergency_command,
+                                        "answers" : self.num_answer_command
+                                     })
+
+        command_dict = defaultdict(lambda : self.autodetection_triggered_command, {
+                            "<@" + settings.BOT_UID + ">" : sobot_commands
+        })
+
+        for word in event['text'].split():
+            if callable(command_dict[word]):
+                command_dict[word](client, event)
+                break;
+            else:
+                command_dict = command_dict[word]
+
 
     def post_message_to_middleware(self, message):
         cached_stop_words = stopwords.words("english")
@@ -147,27 +179,7 @@ class Command(BaseCommand):
                 events = client.rtm_read()
                 print("%s----%s" % (team, events))
                 for event in events:
-                    if self.toggle_detection_check(event):
-                        self.auto_detection_enabled = not self.auto_detection_enabled
-                        client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
-                    elif self.help_check(event):
-                        client.rtm_send_message(event['channel'], settings.INFORMATIVE_MESSAGE)
-                    elif self.change_nasnwers_check(event):
-                        self.number_of_answers = int(event['text'].split()[2])
-                        client.rtm_send_message(event['channel'], "Number of answers returned are %d" % self.number_of_answers)
-                    elif self.change_divergency_check(event):
-                        self.divergent_flag = not self.divergent_flag
-                        client.rtm_send_message(event['channel'], ("Divergent answers: %s" % str(self.divergent_flag)))
-                    elif self.is_direct_message(event):
-                        message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
-                        message_info = self.analyse_message(message)
-                        parsed_output = self.post_message_to_middleware(message_info)
-                        for (answer, review) in parsed_output:
-                            client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
-                    elif self.auto_detection_enabled and self.is_programming_question(event):
-                        message_info =  self.messages_info.pop(0)
-                        parsed_output = self.post_message_to_middleware(message_info)
-                        for (answer, review) in parsed_output:
-                            client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
+                    if self.is_for_handling(event):
+                        self.handle_commands(client, event)
 
                 time.sleep(0.1)
