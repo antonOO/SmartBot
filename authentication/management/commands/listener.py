@@ -28,42 +28,58 @@ class Command(BaseCommand):
         interpreted_message = interpreter.parse(message)
         return interpreted_message
 
+    def parse_message(self, message):
+        block = re.compile('(<pre><code>|</code></pre>)')
+        message = block.sub("```", message)
+        snip = re.compile('(<code>|</code>)')
+        message = snip.sub("`", message)
+        parse = re.compile('</*h[0-9]>|</*[a-z]*>')
+        return parse.sub("", message)
+
+    def create_attachment(self, message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted):
+        params = {
+                      'answer' : message,
+                      'query' : query,
+                      'intent' : intent,
+                      'bm25_score' : bm25_score,
+                      'qscore' : qscore,
+                      'view_count' : view_count,
+                      'ascore' : ascore,
+                      'is_accepted' : is_accepted
+                  }
+        url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
+        url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
+        review_attachment = json.dumps([{
+              "fallback": "Make Sobot better!",
+              "actions": [
+                {
+                  "type": "button",
+                  "text": "I like the answer!",
+                  "url": url_update_positive,
+                  "style": "primary"
+                },
+                {
+                  "type": "button",
+                  "text": "Sobot this is garbage!",
+                  "url": url_update_negative,
+                  "style": "danger"
+                },
+                {
+                  "type": "button",
+                  "text": "Show me more.",
+                  "url": link
+                }
+              ]
+            }
+          ])
+        return review_attachment
+
     def parse_for_slack(self, messages, query, intent):
         try:
             parsed_output = []
-            for message, link, bm25_score in messages:
-                block = re.compile('(<pre><code>|</code></pre>)')
-                message = block.sub("```", message)
-                snip = re.compile('(<code>|</code>)')
-                message = snip.sub("`", message)
-                parse = re.compile('</*h[0-9]>|</*[a-z]*>')
-                message = parse.sub("", message)
-                params = {'answer' : message, 'query' : query, 'intent' : intent, 'bm25_score' : bm25_score}
-                url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
-                url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
-                review_attachment = json.dumps([{
-                      "fallback": "Make Sobot better!",
-                      "actions": [
-                        {
-                          "type": "button",
-                          "text": "I like the answer!",
-                          "url": url_update_positive,
-                          "style": "primary"
-                        },
-                        {
-                          "type": "button",
-                          "text": "Sobot this is garbage!",
-                          "url": url_update_negative,
-                          "style": "danger"
-                        },
-                        {
-                          "type": "button",
-                          "text": "Show me more.",
-                          "url": link
-                        }
-                      ]
-                    }
-                  ])
+            for message, link, bm25_score, qscore, view_count, ascore, is_accepted in messages:
+                message = self.parse_message(message)
+                review_attachment = self.create_attachment(message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted)
                 parsed_output.append((message,review_attachment))
             return parsed_output
         except:
