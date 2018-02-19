@@ -36,7 +36,7 @@ class Command(BaseCommand):
         parse = re.compile('</*h[0-9]>|</*[a-z]*>')
         return parse.sub("", message)
 
-    def create_attachment(self, message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted):
+    def create_attachment(self, message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted, answer_id):
         params = {
                       'answer' : message,
                       'query' : query,
@@ -45,7 +45,8 @@ class Command(BaseCommand):
                       'qscore' : qscore,
                       'view_count' : view_count,
                       'ascore' : ascore,
-                      'is_accepted' : is_accepted
+                      'is_accepted' : is_accepted,
+                      'uid' : answer_id
                   }
         url_update_negative = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE + urllib.parse.urlencode(params)
         url_update_positive = settings.MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE + urllib.parse.urlencode(params)
@@ -77,9 +78,9 @@ class Command(BaseCommand):
     def parse_for_slack(self, messages, query, intent):
         try:
             parsed_output = []
-            for message, link, bm25_score, qscore, view_count, ascore, is_accepted in messages:
+            for message, link, bm25_score, qscore, view_count, ascore, is_accepted, answer_id in messages:
                 message = self.parse_message(message)
-                review_attachment = self.create_attachment(message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted)
+                review_attachment = self.create_attachment(message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted, answer_id)
                 parsed_output.append((message,review_attachment))
             return parsed_output
         except:
@@ -188,6 +189,7 @@ class Command(BaseCommand):
                         }
 
         response = requests.get(settings.MIDDLEWARE_URL_ANSWER, message_json)
+        print(response.text)
         json_answer_info = json.loads(response.text)
 
         query_string = json_answer_info['query']

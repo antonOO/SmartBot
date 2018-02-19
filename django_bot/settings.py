@@ -128,9 +128,13 @@ TRAINING_CONFIGURATION_FILE = "/home/anton/py_workspace/restaurant_tutorial/conf
 TRAINING_MODEL_PROGRAMMING_GENERAL = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180120-042323"
 TRAINING_MODEL_QUESTION_ORIENTED = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180121-163528"
 
-MIDDLEWARE_URL_ANSWER= "http://localhost:8001/answer/"
-MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE = "http://localhost:8001/update_training_data_positive/?"
-MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE = "http://localhost:8001/update_training_data_negative/?"
+MIDDLEWARE_URL_ANSWER = "http://sobotmid.pythonanywhere.com/answer"#" "http://localhost:8001/answer/"
+MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE = "http://sobotmid.pythonanywhere.com/update_training_data_positive/?" #"http://localhost:8001/update_training_data_positive/?"
+MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE = "http://sobotmid.pythonanywhere.com/update_training_data_negative/?" #"http://localhost:8001/update_training_data_negative/?"
+
+# MIDDLEWARE_URL_ANSWER = "http://localhost:8001/answer/"
+# MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE = "http://localhost:8001/update_training_data_positive/?"
+# MIDDLEWARE_URL_UPDATE_TRAINING_DATA_NEGATIVE = "http://localhost:8001/update_training_data_negative/?"
 
 INFORMATIVE_MESSAGE = """
                          SOBOT is a helper programming bot, which detects programming questions
@@ -143,6 +147,8 @@ INFORMATIVE_MESSAGE = """
                                                         (used to return answers from different questions, rather than all the answers
                                                         from the most relevat question)
                          @Sobot <string>           <--- takes a string which is a question to be forwarded to SO
+                         @Sobot directsearch       <--- triggers a direct search option (rather than custom ranking on the middleware) -
+                                                        the StackOverflow default similarity search
                          """
 MINIMAL_NUMBER_OF_WORDS = 4
 BOT_UID = 'U8CLSEWAC'
