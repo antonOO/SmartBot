@@ -3,10 +3,38 @@
     <head>
         <meta charset="UTF-8">
         <title>Landing Page</title>
+        <style>
+
+          div {
+            width: 30%;
+            margin: auto;
+            text-align: center;
+            margin-top: 50vh;
+          }
+
+          #addButton {
+            text-decoration: none;
+            border: 1px solid #00cc00;
+            border-radius: 8px;
+            background-color: #00cc00;
+            color: white;
+            padding: 0.5rem;
+            font-weight: bold;
+            width: 100%;
+          }
+
+          #addButton:hover, #addButton:focus {
+            background-color: #33ff33;
+            border: 1px solid #33ff33;
+          }
+
+        </style>
     </head>
     <body>
-        <a href='https://slack.com/oauth/authorize?scope=bot&client_id={{ client_id }}'>
-            Add To Slack
+      <div>
+        <a href='https://slack.com/oauth/authorize?scope=bot&client_id={{ client_id }}'id="addButton" >
+            Add SOBOT TO Slack
         </a>
+      </div>
     </body>
 </html>

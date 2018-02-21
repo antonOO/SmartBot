@@ -22,12 +22,31 @@ class Command(BaseCommand):
         self.number_of_answers = 1
         self.direct_search_flag = False
 
+    '''
+        Determines whether the message
+        is a programming question, through
+        a pretrained RasaNLU model.
+
+        params - message string
+
+        return - interpreted message, a rasa_nlu
+                formatted dict, with intent,
+                entities and certainty
+    '''
     def analyse_message(self, message):
         model_directory = settings.TRAINING_MODEL_QUESTION_ORIENTED
         interpreter = Interpreter.load(model_directory, RasaNLUConfig(settings.TRAINING_CONFIGURATION_FILE))
         interpreted_message = interpreter.parse(message)
         return interpreted_message
 
+    '''
+        Strip junk added from SO with Slack
+        modifiers.
+
+        params - message string
+
+        return - message string
+    '''
     def parse_message(self, message):
         block = re.compile('(<pre><code>|</code></pre>)')
         message = block.sub("```", message)
@@ -36,6 +55,9 @@ class Command(BaseCommand):
         parse = re.compile('</*h[0-9]>|</*[a-z]*>')
         return parse.sub("", message)
 
+    '''
+        
+    '''
     def create_attachment(self, message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted, answer_id):
         params = {
                       'answer' : message,
@@ -198,6 +220,7 @@ class Command(BaseCommand):
 
         return self.parse_for_slack(array_of_answers, query_string, intent)
 
+
     def handle(self, *args, **options):
         print(Team.objects)
         team = Team.objects.first()
@@ -208,6 +231,9 @@ class Command(BaseCommand):
                 print("%s----%s" % (team, events))
                 for event in events:
                     if self.is_for_handling(event):
-                        self.handle_commands(client, event)
+                        if("<@" + settings.BOT_UID + ">" in event['text'] and event['text'].split()[0] != "<@" + settings.BOT_UID + ">"):
+                            client.rtm_send_message(event['channel'], "Hi! I saw that you referred me... Type `@Sobot help` to see my capabilities!")
+                        else:
+                            self.handle_commands(client, event)
 
                 time.sleep(0.1)
