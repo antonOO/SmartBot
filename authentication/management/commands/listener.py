@@ -56,7 +56,16 @@ class Command(BaseCommand):
         return parse.sub("", message)
 
     '''
-        
+        Create a button attachment,
+        where nested in every button
+        there is an url for updateing
+        training data.
+
+        params - all training data
+        from SO + the message string,
+        query, link and intent
+
+        return - json attachment
     '''
     def create_attachment(self, message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted, answer_id):
         params = {
@@ -97,6 +106,18 @@ class Command(BaseCommand):
           ])
         return review_attachment
 
+    '''
+        If an answer is found and scaled,
+        create an attachment, otherwise
+        parse the error from the server.
+
+        params - messages is a tuple with
+        all of the information from SO and
+        middleware with regards to an answer,
+        query is string and intent string
+
+        return - parsed output string
+    '''
     def parse_for_slack(self, messages, query, intent):
         try:
             parsed_output = []
@@ -111,8 +132,17 @@ class Command(BaseCommand):
                 parsed_output.append((message, ""))
             return parsed_output
 
+    '''
+        Check if a message is a
+        programming question - if yes
+        store it in an array for further
+        processing (no need to analyse it
+        multiple times)
 
+        params - Slack event
 
+        return - boolean
+    '''
     def is_programming_question(self, event):
         if ('type' in event
         and event['type'] == 'message'
@@ -127,23 +157,51 @@ class Command(BaseCommand):
                 return True
         return False
 
+    '''
+        Check if a event is a message,
+        hence, it needs handling.
+
+        params - event
+
+        return - boolean
+    '''
     def is_for_handling(self, event):
         return ('type' in event
         and event['type'] == 'message'
         and 'user' in event
         and event['user'] != settings.BOT_UID)
 
+    '''
+        Execute help command
+
+        params - SlackClient ref, event
+    '''
     def help_command(self, client, event):
         client.rtm_send_message(event['channel'], settings.INFORMATIVE_MESSAGE)
 
+    '''
+        Execute toggle command
+
+        params - SlackClient ref, event
+    '''
     def toggle_command(self, client, event):
         self.auto_detection_enabled = not self.auto_detection_enabled
         client.rtm_send_message(event['channel'], ("Auto detection is enabled: %s" % str(self.auto_detection_enabled)))
 
+    '''
+        Execute divergency command
+
+        params - SlackClient ref, event
+    '''
     def divergency_command(self, client, event):
         self.divergent_flag = not self.divergent_flag
         client.rtm_send_message(event['channel'], ("Divergent answers: %s" % str(self.divergent_flag)))
 
+    '''
+        Set number of answers command
+
+        params - SlackClient ref, event
+    '''
     def num_answer_command(self, client, event):
         if (len(event['text'].split()) == 3
          and event['text'].split()[2].isdigit()
@@ -153,10 +211,20 @@ class Command(BaseCommand):
         else:
             client.rtm_send_message(event['channel'], "Invalid use of answers command!")
 
+    '''
+        Execute directsearch command
+
+        params - SlackClient ref, event
+    '''
     def direct_search_command(self, client, event):
         self.direct_search_flag = not self.direct_search_flag
         client.rtm_send_message(event['channel'], ("Direct search: %s" % str(self.direct_search_flag)))
 
+    '''
+        Send a direct message
+
+        params - SlackClient ref, event
+    '''
     def direct_message_command(self, client, event):
         message = event["text"].replace("<@" + settings.BOT_UID + ">", "")
         message_info = self.analyse_message(message)
@@ -164,6 +232,11 @@ class Command(BaseCommand):
         for (answer, review) in parsed_output:
             client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
 
+    '''
+        Autodetected question command
+
+        params - SlackClient ref, event
+    '''
     def autodetection_triggered_command(self, client, event):
         if self.auto_detection_enabled and self.is_programming_question(event):
             message_info =  self.messages_info.pop(0)
@@ -171,6 +244,12 @@ class Command(BaseCommand):
             for (answer, review) in parsed_output:
                 client.api_call("chat.postMessage",text=answer, channel=event["channel"], attachments=review, as_user=True)
 
+    '''
+        Combines all commands into a
+        single method.
+
+        params - SlackClient ref, event
+    '''
     def handle_commands(self, client, event):
         sobot_commands = defaultdict(lambda : self.direct_message_command,
                                      {
@@ -192,12 +271,29 @@ class Command(BaseCommand):
             else:
                 command_dict = command_dict[word]
 
+    '''
+        Remove stopword from a message
+        in english
+
+        params - RasaNLU parsed message
+
+        return - parsed message string
+    '''
     def remove_stopwords_non_direct(self, message):
         if not self.direct_search_flag:
             cached_stop_words = stopwords.words("english")
             return " ".join(word for word in message["text"].split() if word not in cached_stop_words)
         return message['text']
 
+    '''
+        Sends data to middleware server
+
+        params - RasaNLU parsed message
+
+        return - array of tuples,
+        containing answer and all associated
+        info with the answer
+    '''
     def post_message_to_middleware(self, message):
         question = self.remove_stopwords_non_direct(message)
         message_json = {
@@ -220,7 +316,9 @@ class Command(BaseCommand):
 
         return self.parse_for_slack(array_of_answers, query_string, intent)
 
-
+    '''
+        Endless communication cycle with Slack
+    '''
     def handle(self, *args, **options):
         print(Team.objects)
         team = Team.objects.first()
