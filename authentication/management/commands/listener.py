@@ -65,7 +65,7 @@ class Command(BaseCommand):
         from SO + the message string,
         query, link and intent
 
-        return - json attachment
+        return - json attachment string
     '''
     def create_attachment(self, message, query, intent, link, bm25_score, qscore, view_count, ascore, is_accepted, answer_id):
         params = {
@@ -275,15 +275,15 @@ class Command(BaseCommand):
         Remove stopword from a message
         in english
 
-        params - RasaNLU parsed message
+        params - string message
 
         return - parsed message string
     '''
     def remove_stopwords_non_direct(self, message):
         if not self.direct_search_flag:
             cached_stop_words = stopwords.words("english")
-            return " ".join(word for word in message["text"].split() if word not in cached_stop_words)
-        return message['text']
+            return " ".join(word for word in message.split() if word not in cached_stop_words)
+        return message
 
     '''
         Sends data to middleware server
@@ -295,7 +295,7 @@ class Command(BaseCommand):
         info with the answer
     '''
     def post_message_to_middleware(self, message):
-        question = self.remove_stopwords_non_direct(message)
+        question = self.remove_stopwords_non_direct(message['text'])
         message_json = {
                             'question' : question,
                             'entities' : str([(e['value'], e['entity']) for e in message['entities']]),
@@ -307,7 +307,6 @@ class Command(BaseCommand):
                         }
 
         response = requests.get(settings.MIDDLEWARE_URL_ANSWER, message_json)
-        print(response.text)
         json_answer_info = json.loads(response.text)
 
         query_string = json_answer_info['query']
