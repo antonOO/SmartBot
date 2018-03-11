@@ -1,8 +1,10 @@
+## What is SmartBot?
+
 SmartBot (or Sobot) is a computer science oriented QA bot, which is attachable to Slack. 
 It identifies only computer science related questions, within a channel,
 and tries to find their answers on SO. 
 
-SmartBot is written in python - all of the dependencies are listed in the requirements.txt
+SmartBot is written in Python3 - all of the dependencies are listed in the requirements.txt
 
 ## To install Sobot:
 
