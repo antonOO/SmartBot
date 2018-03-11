@@ -1,0 +1,5 @@
+{
+  "pipeline": "spacy_sklearn",
+  "path" : "/home/anton/py_workspace/restaurant_tutorial/models",
+  "data" : "train_data.json"
+}

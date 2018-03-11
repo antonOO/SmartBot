@@ -121,12 +121,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-SLACK_CLIENT_ID = "YOUR CLIENT ID HERE"
-SLACK_CLIENT_SECRET = "YOUR CLIENT SECRET HERE"
+SLACK_CLIENT_ID = "YOUR CLIENT ID"
+SLACK_CLIENT_SECRET = "YOUR CLIENT SECRET"
 
-TRAINING_CONFIGURATION_FILE = "/home/anton/py_workspace/restaurant_tutorial/config_spacy.json"
-TRAINING_MODEL_PROGRAMMING_GENERAL = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180120-042323"
-TRAINING_MODEL_QUESTION_ORIENTED = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180121-163528"
+TRAINING_CONFIGURATION_FILE = BASE_DIR + "/config_spacy.json"
+TRAINING_MODEL_QUESTION_ORIENTED = BASE_DIR + "/model_20180121-163528"
 
 MIDDLEWARE_URL_ANSWER = "http://sobotmid.pythonanywhere.com/answer"#" "http://localhost:8001/answer/"
 MIDDLEWARE_URL_UPDATE_TRAINING_DATA_POSITIVE = "http://sobotmid.pythonanywhere.com/update_training_data_positive/?" #"http://localhost:8001/update_training_data_positive/?"
@@ -151,4 +150,4 @@ INFORMATIVE_MESSAGE = """
                                                         the StackOverflow default similarity search
                          """
 MINIMAL_NUMBER_OF_WORDS = 4
-BOT_UID = 'YOUR BOT UID HERE'
+BOT_UID = 'YOUR BOT ID'
