@@ -1,4 +1,4 @@
-## What is SmartBot?
+## What is SmartBot (Sobot)?
 
 SmartBot (or Sobot) is a computer science oriented QA bot, which is attachable to Slack. 
 It identifies only computer science related questions, within a channel,
