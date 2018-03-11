@@ -22,3 +22,6 @@ In order to run SmartBot You need to have Python3.
 
 If you receive a success message, then Sobot is successfully added to Your workspace.
 To run sobot execute `python manage.py listener` from a terminal window in the project directory.
+
+11. After you run the Slack listener and start the bot, see in the terminal window Your bot UID and
+set the `BOT_UID` in the settings.py file.
