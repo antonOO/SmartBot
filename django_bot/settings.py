@@ -121,8 +121,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-SLACK_CLIENT_ID = "260636280609.260593695920"
-SLACK_CLIENT_SECRET = "fd14a5c68c9cc3209434042e9b805fd8"
+SLACK_CLIENT_ID = "YOUR CLIENT ID HERE"
+SLACK_CLIENT_SECRET = "YOUR CLIENT SECRET HERE"
 
 TRAINING_CONFIGURATION_FILE = "/home/anton/py_workspace/restaurant_tutorial/config_spacy.json"
 TRAINING_MODEL_PROGRAMMING_GENERAL = "/home/anton/py_workspace/restaurant_tutorial/models/default/model_20180120-042323"
@@ -151,4 +151,4 @@ INFORMATIVE_MESSAGE = """
                                                         the StackOverflow default similarity search
                          """
 MINIMAL_NUMBER_OF_WORDS = 4
-BOT_UID = 'U8CLSEWAC'
+BOT_UID = 'YOUR BOT UID HERE'
