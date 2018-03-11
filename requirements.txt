@@ -1,5 +1,5 @@
-requests==2.18.1
+requests
 nltk==3.2.5
 rasa_nlu==0.10.6
-Django==1.11.4
-slackclient==1.0.0
+Django
+slackclient
