@@ -1,5 +1,5 @@
-requests
+requests==2.18.1
 nltk==3.2.5
 rasa_nlu==0.10.6
 Django
-slackclient
+slackclient==1.0.0
