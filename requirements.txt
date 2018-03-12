@@ -13,7 +13,6 @@ numpy==1.14.0
 simplejson==3.13.2
 cloudpickle==0.5.2
 msgpack-python==0.5.4
-requests==2.18.1
 nltk==3.2.5
 rasa_nlu==0.10.6
 Django
